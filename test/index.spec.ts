@@ -17,7 +17,6 @@ describe('yup-to-openapi', () => {
             });
             const output: SchemaObject = { type: 'object' };
 
-            console.log({ input, output });
             expect(yupToOpenAPI(input)).toEqual(output);
         });
     });

@@ -121,9 +121,9 @@ const yupToSwaggerType: Record<string, { types: FieldType[]; default: FieldType 
 };
 
 function getTests(yupField: SchemaLike): Record<string, ExtraParams | undefined> {
-    console.log('#########', yupField.describe());
+    const description = yupField.describe() as any;
 
-    return yupField.describe().tests.reduce((agg, test) => {
+    return description.tests.reduce((agg: any, test: any) => {
         if (!test.name) {
             return agg;
         }
@@ -174,8 +174,8 @@ function getFormat(yupField: SchemaLike): string | null {
 }
 
 function getEnum(yupField: SchemaLike): unknown[] | null {
-    console.log('#########', yupField.describe());
-    const values = yupField.describe().oneOf;
+    const description = yupField.describe() as any;
+    const values = description.oneOf;
 
     return Array.isArray(values) && values.length > 0 ? values : null;
 }

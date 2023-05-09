@@ -1,5 +1,5 @@
 {
-  "name": "@rudi23/yup-to-openapi",
+  "name": "yup-to-openapi",
   "version": "2.1.2",
   "description": "Configurable, input validated routing for koa using yup",
   "keywords": [
