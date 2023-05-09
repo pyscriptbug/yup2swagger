@@ -17,6 +17,7 @@ describe('yup-to-openapi', () => {
             });
             const output: SchemaObject = { type: 'object' };
 
+            console.log({ input, output });
             expect(yupToOpenAPI(input)).toEqual(output);
         });
     });
@@ -261,28 +262,48 @@ describe('yup-to-openapi', () => {
 
         it('should handle "positive" attribute', () => {
             const input = yup.number().positive();
-            const output: SchemaObject = { type: 'number', format: 'float', minimum: 0, exclusiveMinimum: true };
+            const output: SchemaObject = {
+                type: 'number',
+                format: 'float',
+                minimum: 0,
+                exclusiveMinimum: true,
+            };
 
             expect(yupToOpenAPI(input)).toEqual(output);
         });
 
         it('should handle "negative" attribute', () => {
             const input = yup.number().negative();
-            const output: SchemaObject = { type: 'number', format: 'float', maximum: 0, exclusiveMaximum: true };
+            const output: SchemaObject = {
+                type: 'number',
+                format: 'float',
+                maximum: 0,
+                exclusiveMaximum: true,
+            };
 
             expect(yupToOpenAPI(input)).toEqual(output);
         });
 
         it('should handle "lessThan" attribute', () => {
             const input = yup.number().lessThan(10);
-            const output: SchemaObject = { type: 'number', format: 'float', maximum: 10, exclusiveMaximum: true };
+            const output: SchemaObject = {
+                type: 'number',
+                format: 'float',
+                maximum: 10,
+                exclusiveMaximum: true,
+            };
 
             expect(yupToOpenAPI(input)).toEqual(output);
         });
 
         it('should handle "moreThan" attribute', () => {
             const input = yup.number().moreThan(1);
-            const output: SchemaObject = { type: 'number', format: 'float', minimum: 1, exclusiveMinimum: true };
+            const output: SchemaObject = {
+                type: 'number',
+                format: 'float',
+                minimum: 1,
+                exclusiveMinimum: true,
+            };
 
             expect(yupToOpenAPI(input)).toEqual(output);
         });

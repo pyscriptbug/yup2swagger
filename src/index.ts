@@ -1,8 +1,27 @@
 import { ArraySchema, isSchema, ObjectSchema } from 'yup';
-import type { ExtraParams, SchemaLike } from 'yup/lib/types.d.js';
-import type { AnySchema, AnyObjectSchema } from 'yup';
+import type {
+    Schema,
+    AnyObject,
+    AnyObjectSchema,
+    lazy,
+    MixedSchema,
+    StringSchema,
+    NumberSchema,
+    DateSchema,
+} from 'yup';
 import type { SchemaObject } from 'openapi3-ts';
-import type Lazy from 'yup/lib/Lazy.d.js';
+
+type ExtraParams = Record<string, unknown>;
+type Lazy = ReturnType<typeof lazy>;
+type SchemaLike<T extends AnyObject = AnyObject, U extends AnyObject = AnyObject> =
+    | Schema<T>
+    | Lazy
+    | ArraySchema<T[], U>
+    | AnyObjectSchema
+    | MixedSchema<T, U>
+    | DateSchema
+    | StringSchema
+    | NumberSchema;
 
 type Meta = {
     title?: string;
@@ -101,7 +120,9 @@ const yupToSwaggerType: Record<string, { types: FieldType[]; default: FieldType 
     },
 };
 
-function getTests(yupField: AnySchema): Record<string, ExtraParams | undefined> {
+function getTests(yupField: SchemaLike): Record<string, ExtraParams | undefined> {
+    console.log('#########', yupField.describe());
+
     return yupField.describe().tests.reduce((agg, test) => {
         if (!test.name) {
             return agg;
@@ -114,13 +135,13 @@ function getTests(yupField: AnySchema): Record<string, ExtraParams | undefined> 
     }, {} as Record<string, ExtraParams | undefined>);
 }
 
-function findTests<SearchItem extends string = string>(yupField: AnySchema, searchArr: SearchItem[]): SearchItem[] {
+function findTests<SearchItem extends string = string>(yupField: SchemaLike, searchArr: SearchItem[]): SearchItem[] {
     const allAttrNames = Object.keys(getTests(yupField));
 
     return searchArr.filter((t) => allAttrNames.includes(t));
 }
 
-function getType(yupField: AnySchema): FieldType | undefined {
+function getType(yupField: SchemaLike): FieldType | undefined {
     const typeConfig = yupToSwaggerType[yupField.type];
     if (!typeConfig) {
         throw new Error(`Cannot find support for "${yupField.type}" type in yupToSwaggerType config.`);
@@ -131,13 +152,13 @@ function getType(yupField: AnySchema): FieldType | undefined {
     return result.shift() || typeConfig.default;
 }
 
-function isInteger(yupField: AnySchema) {
+function isInteger(yupField: SchemaLike) {
     const integerAttributes = findTests(yupField, ['integer']);
 
     return integerAttributes.length > 0;
 }
 
-function getFormat(yupField: AnySchema): string | null {
+function getFormat(yupField: SchemaLike): string | null {
     if (isInteger(yupField)) {
         return 'int32';
     }
@@ -152,13 +173,14 @@ function getFormat(yupField: AnySchema): string | null {
     return result.shift() || yupToSwaggerFormat[yupField.type].default;
 }
 
-function getEnum(yupField: AnySchema): unknown[] | null {
+function getEnum(yupField: SchemaLike): unknown[] | null {
+    console.log('#########', yupField.describe());
     const values = yupField.describe().oneOf;
 
     return Array.isArray(values) && values.length > 0 ? values : null;
 }
 
-function getMiscAttributes(yupField: AnySchema): Record<string, string | boolean> {
+function getMiscAttributes(yupField: SchemaLike): Record<string, string | boolean> {
     const conditionsConfig = yupToSwaggerConditions[yupField.type] || [];
     const allAttrNames = getTests(yupField);
     const result = findTests(yupField, conditionsConfig);
@@ -235,7 +257,7 @@ function getMiscAttributes(yupField: AnySchema): Record<string, string | boolean
     );
 }
 
-function getObjectProperties(fields: Record<string, AnySchema>): Record<string, SchemaObject> {
+function getObjectProperties(fields: AnyObject): Record<string, SchemaObject> {
     return Object.entries(fields).reduce(
         (agg, [name, yupSchema]) => ({
             ...agg,
@@ -245,15 +267,17 @@ function getObjectProperties(fields: Record<string, AnySchema>): Record<string, 
     );
 }
 
-function getArrayItems(yupSchema: AnySchema): SchemaObject {
-    return parse(yupSchema);
+function getArrayItems(yupSchema: AnyObject): SchemaObject {
+    console.log({ yupSchema });
+
+    return parse(yupSchema as any);
 }
 
-function isRequired(yupSchema: AnySchema): boolean {
-    return yupSchema.spec.presence.includes('required');
+function isRequired(yupSchema: Schema): boolean {
+    return !yupSchema.spec.nullable && !yupSchema.spec.optional;
 }
 
-function getRequired(fields: Record<string, AnySchema>): string[] {
+function getRequired(fields: AnyObject): string[] {
     return Object.entries(fields).reduce(
         (agg, [name, yupSchema]) => (isRequired(yupSchema) ? [...agg, name] : agg),
         [] as string[]
@@ -285,7 +309,7 @@ function parseObject(yupSchema: AnyObjectSchema): SchemaObject {
     return schema;
 }
 
-function parseArray(yupSchema: ArraySchema<AnySchema>): SchemaObject {
+function parseArray(yupSchema: ArraySchema<AnyObject[], AnyObject>): SchemaObject {
     const meta = yupSchema.describe().meta as Meta | undefined;
     const title = meta?.title;
     const description = meta?.description;
@@ -315,11 +339,11 @@ function parseArray(yupSchema: ArraySchema<AnySchema>): SchemaObject {
     return schema;
 }
 
-function isLazy(x: unknown): x is Lazy<any> {
+function isLazy(x: SchemaLike): x is Lazy {
     return isSchema(x) && x.type === 'lazy';
 }
 
-export default function parse(yupSchema: SchemaLike): SchemaObject {
+export default function parse<T extends AnyObject, U extends AnyObject>(yupSchema: SchemaLike<T, U>): SchemaObject {
     if (isLazy(yupSchema)) {
         return { type: 'object' } as SchemaObject;
     }
