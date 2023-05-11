@@ -268,8 +268,6 @@ function getObjectProperties(fields: AnyObject): Record<string, SchemaObject> {
 }
 
 function getArrayItems(yupSchema: AnyObject): SchemaObject {
-    console.log({ yupSchema });
-
     return parse(yupSchema as any);
 }
 
